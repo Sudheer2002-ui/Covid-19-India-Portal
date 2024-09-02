@@ -35,11 +35,29 @@ const authenticateToken = (request, response, next) => {
         response.status(401)
         response.send('Invalid JWT Token')
       } else {
+        request.user = payload;
         next()
       }
     })
   }
 }
+app.post('/login/', async (request, response) => {
+  const { username, password } = request.body;
+  const query = `SELECT * FROM user WHERE username = '${username}';`;
+  const user = await db.get(query);
+
+  if (user === undefined) {
+    response.status(400);
+    response.send('Invalid user');
+  } else if (user.password === password) {
+    const payload = { username: username };
+    const jwtToken = jwt.sign(payload, 'MY_SECRET_TOKEN');
+    response.send({ jwtToken });
+  } else {
+    response.status(400);
+    response.send('Invalid password');
+  }
+});
 
 app.get('/states/', authenticateToken, async (request, response) => {
   const query = `select state_id as stateId , state_name as stateName,population from state`
@@ -111,23 +129,5 @@ app.get(
     response.send(stateN)
   },
 )
-app.post('/login/', (request, response) => {
-  const {username, password} = request.body
-  if (username !== 'christopher_phillips') {
-    response.status(400)
-    response.send('Invalid user')
-  } else if (
-    username === 'christopher_phillips' &&
-    password === 'christy@123'
-  ) {
-    const payload = {
-      username: username,
-    }
-    const jwtToken = jwt.sign(payload, 'MY_SECRET_TOKEN')
-    response.send({jwtToken})
-  } else {
-    response.status(400)
-    response.send('Invalid password')
-  }
-})
+
 module.exports = app
